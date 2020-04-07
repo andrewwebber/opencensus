@@ -17,10 +17,10 @@ func TestRabbit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rabbitConn.Close()
-	subscription := rabbitpubsub.OpenSubscription(rabbitConn, "atl.orthanc.download", nil)
+	subscription := rabbitpubsub.OpenSubscription(rabbitConn, "atl.orthanc_download", nil)
 	defer subscription.Shutdown(ctx)
 
-	topic := rabbitpubsub.OpenTopic(rabbitConn, "atl.orthanc.download", nil)
+	topic := rabbitpubsub.OpenTopic(rabbitConn, "atl.orthanc_download", nil)
 	defer topic.Shutdown(ctx)
 	if err = topic.Send(ctx, &pubsub.Message{
 		Body: []byte("Hello, World!\n"),
@@ -30,6 +30,17 @@ func TestRabbit(t *testing.T) {
 			// There is nothing special about the key names.
 			"language":   "en",
 			"importance": "high",
+		},
+		BeforeSend: func(asFunc func(interface{}) bool) error {
+			var pub *amqp.Publishing
+			ok := asFunc(&pub)
+			if !ok {
+				t.Fatal("expected ok")
+			}
+
+			pub.DeliveryMode = 2
+
+			return nil
 		},
 	}); err != nil {
 		t.Fatal(err)
